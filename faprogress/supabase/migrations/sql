@@ -1,0 +1,236 @@
+/*
+  # Football Academy Database Schema
+
+  ## New Tables
+  
+  1. `groups`
+    - `id` (uuid, primary key)
+    - `name` (text) - Group name (Junior, Middle, Senior)
+    - `age_range` (text) - Age range description
+    - `birth_years` (text) - Birth years for the group
+    - `description` (text) - Group description
+    - `created_at` (timestamptz)
+  
+  2. `players`
+    - `id` (uuid, primary key)
+    - `group_id` (uuid, foreign key to groups)
+    - `name` (text) - Player full name
+    - `birth_year` (integer) - Birth year
+    - `parent_name` (text) - Parent contact name
+    - `parent_phone` (text) - Parent phone number
+    - `parent_telegram` (text) - Parent Telegram username
+    - `created_at` (timestamptz)
+  
+  3. `schedule`
+    - `id` (uuid, primary key)
+    - `group_id` (uuid, foreign key to groups)
+    - `day_of_week` (integer) - 0-6 for Sunday-Saturday
+    - `time_start` (time) - Start time
+    - `time_end` (time) - End time
+    - `location` (text) - Training location
+    - `created_at` (timestamptz)
+  
+  4. `news`
+    - `id` (uuid, primary key)
+    - `title` (text) - News title
+    - `content` (text) - News content
+    - `image_url` (text) - Optional image URL
+    - `published` (boolean) - Whether news is published
+    - `created_at` (timestamptz)
+  
+  5. `coaches`
+    - `id` (uuid, primary key)
+    - `user_id` (uuid, foreign key to auth.users)
+    - `name` (text) - Coach name
+    - `bio` (text) - Coach biography
+    - `photo_url` (text) - Coach photo URL
+    - `created_at` (timestamptz)
+
+  ## Security
+    - Enable RLS on all tables
+    - Public read access for groups, schedule, news (published only), coaches
+    - Authenticated coach can manage all data
+*/
+
+-- Create groups table
+CREATE TABLE IF NOT EXISTS groups (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  name text NOT NULL,
+  age_range text NOT NULL,
+  birth_years text NOT NULL,
+  description text DEFAULT '',
+  created_at timestamptz DEFAULT now()
+);
+
+-- Create players table
+CREATE TABLE IF NOT EXISTS players (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  group_id uuid REFERENCES groups(id) ON DELETE CASCADE,
+  name text NOT NULL,
+  birth_year integer NOT NULL,
+  parent_name text NOT NULL,
+  parent_phone text NOT NULL,
+  parent_telegram text DEFAULT '',
+  created_at timestamptz DEFAULT now()
+);
+
+-- Create schedule table
+CREATE TABLE IF NOT EXISTS schedule (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  group_id uuid REFERENCES groups(id) ON DELETE CASCADE,
+  day_of_week integer NOT NULL CHECK (day_of_week >= 0 AND day_of_week <= 6),
+  time_start time NOT NULL,
+  time_end time NOT NULL,
+  location text NOT NULL,
+  created_at timestamptz DEFAULT now()
+);
+
+-- Create news table
+CREATE TABLE IF NOT EXISTS news (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  title text NOT NULL,
+  content text NOT NULL,
+  image_url text DEFAULT '',
+  published boolean DEFAULT false,
+  created_at timestamptz DEFAULT now()
+);
+
+-- Create coaches table
+CREATE TABLE IF NOT EXISTS coaches (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid REFERENCES auth.users(id) ON DELETE CASCADE,
+  name text NOT NULL,
+  bio text DEFAULT '',
+  photo_url text DEFAULT '',
+  created_at timestamptz DEFAULT now()
+);
+
+-- Enable RLS
+ALTER TABLE groups ENABLE ROW LEVEL SECURITY;
+ALTER TABLE players ENABLE ROW LEVEL SECURITY;
+ALTER TABLE schedule ENABLE ROW LEVEL SECURITY;
+ALTER TABLE news ENABLE ROW LEVEL SECURITY;
+ALTER TABLE coaches ENABLE ROW LEVEL SECURITY;
+
+-- Groups policies (public read, authenticated write)
+CREATE POLICY "Anyone can view groups"
+  ON groups FOR SELECT
+  TO public
+  USING (true);
+
+CREATE POLICY "Authenticated users can insert groups"
+  ON groups FOR INSERT
+  TO authenticated
+  WITH CHECK (true);
+
+CREATE POLICY "Authenticated users can update groups"
+  ON groups FOR UPDATE
+  TO authenticated
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "Authenticated users can delete groups"
+  ON groups FOR DELETE
+  TO authenticated
+  USING (true);
+
+-- Players policies (public read, authenticated write)
+CREATE POLICY "Anyone can view players"
+  ON players FOR SELECT
+  TO public
+  USING (true);
+
+CREATE POLICY "Authenticated users can insert players"
+  ON players FOR INSERT
+  TO authenticated
+  WITH CHECK (true);
+
+CREATE POLICY "Authenticated users can update players"
+  ON players FOR UPDATE
+  TO authenticated
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "Authenticated users can delete players"
+  ON players FOR DELETE
+  TO authenticated
+  USING (true);
+
+-- Schedule policies (public read, authenticated write)
+CREATE POLICY "Anyone can view schedule"
+  ON schedule FOR SELECT
+  TO public
+  USING (true);
+
+CREATE POLICY "Authenticated users can insert schedule"
+  ON schedule FOR INSERT
+  TO authenticated
+  WITH CHECK (true);
+
+CREATE POLICY "Authenticated users can update schedule"
+  ON schedule FOR UPDATE
+  TO authenticated
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "Authenticated users can delete schedule"
+  ON schedule FOR DELETE
+  TO authenticated
+  USING (true);
+
+-- News policies (public can view published only, authenticated can manage all)
+CREATE POLICY "Anyone can view published news"
+  ON news FOR SELECT
+  TO public
+  USING (published = true);
+
+CREATE POLICY "Authenticated users can view all news"
+  ON news FOR SELECT
+  TO authenticated
+  USING (true);
+
+CREATE POLICY "Authenticated users can insert news"
+  ON news FOR INSERT
+  TO authenticated
+  WITH CHECK (true);
+
+CREATE POLICY "Authenticated users can update news"
+  ON news FOR UPDATE
+  TO authenticated
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "Authenticated users can delete news"
+  ON news FOR DELETE
+  TO authenticated
+  USING (true);
+
+-- Coaches policies (public read, authenticated write)
+CREATE POLICY "Anyone can view coaches"
+  ON coaches FOR SELECT
+  TO public
+  USING (true);
+
+CREATE POLICY "Authenticated users can insert coaches"
+  ON coaches FOR INSERT
+  TO authenticated
+  WITH CHECK (true);
+
+CREATE POLICY "Authenticated users can update coaches"
+  ON coaches FOR UPDATE
+  TO authenticated
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "Authenticated users can delete coaches"
+  ON coaches FOR DELETE
+  TO authenticated
+  USING (true);
+
+-- Insert initial groups
+INSERT INTO groups (name, age_range, birth_years, description)
+VALUES 
+  ('Младшая группа', '6-9 лет', '2015 и младше', 'Для самых юных футболистов. Основы техники и командной игры.'),
+  ('Средняя группа', '10-12 лет', '2014-2012', 'Развитие технических навыков и тактического мышления.'),
+  ('Старшая группа', '13-15 лет', '2011-2009', 'Продвинутая подготовка и соревновательная практика.')
+ON CONFLICT DO NOTHING;
